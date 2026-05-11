@@ -39,6 +39,9 @@ npm run build
 ## Deploy to GitHub Pages (automatic)
 
 This repo is configured with `.github/workflows/deploy-pages.yml` to build and publish `dist` to the `gh-pages` branch automatically.
+## Deploy to GitHub Pages (recommended: automatic)
+
+This repo is configured with `.github/workflows/deploy-pages.yml` for automatic GitHub Pages deploys.
 
 ### 1) Push to GitHub
 
@@ -61,6 +64,15 @@ In **GitHub → Settings → Pages**:
 ### 4) Trigger deployment
 
 Push to `main` or `work` to run the deploy workflow automatically (or run it manually from the Actions tab).
+### 3) Enable Pages from Actions
+
+In **GitHub → Settings → Pages**:
+
+- **Source**: `GitHub Actions`
+
+### 4) Trigger deployment
+
+Every push to `main` runs the deploy workflow automatically.
 
 Your app URL will be:
 
