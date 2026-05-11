@@ -36,6 +36,9 @@ npm run dev
 npm run build
 ```
 
+## Deploy to GitHub Pages (automatic)
+
+This repo is configured with `.github/workflows/deploy-pages.yml` to build and publish `dist` to the `gh-pages` branch automatically.
 ## Deploy to GitHub Pages (recommended: automatic)
 
 This repo is configured with `.github/workflows/deploy-pages.yml` for automatic GitHub Pages deploys.
@@ -51,6 +54,16 @@ In **GitHub → Settings → Secrets and variables → Actions**, add:
 - `VITE_API_URL` (required)
 - `VITE_API_KEY` (optional)
 
+### 3) Enable Pages from branch
+
+In **GitHub → Settings → Pages**:
+
+- **Source**: `Deploy from a branch`
+- **Branch**: `gh-pages` and `/ (root)`
+
+### 4) Trigger deployment
+
+Push to `main` or `work` to run the deploy workflow automatically (or run it manually from the Actions tab).
 ### 3) Enable Pages from Actions
 
 In **GitHub → Settings → Pages**:
@@ -89,3 +102,11 @@ All requests include:
 ```http
 x-api-key: <stored access key>
 ```
+
+
+## If you see a 404 on GitHub Pages
+
+1. Confirm the deploy workflow completed successfully in **Actions**.
+2. Confirm Pages source is `gh-pages` branch root.
+3. Wait 1-3 minutes after a successful deploy and refresh.
+4. Open: `https://gbenor.github.io/invoice-frontend/`.
