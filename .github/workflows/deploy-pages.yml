@@ -30,8 +30,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Show GitHub workflow context
+        run: |
+          echo "GITHUB_REF=${GITHUB_REF}"
+          echo "GITHUB_REF_NAME=${GITHUB_REF_NAME}"
+          echo "GITHUB_SHA=${GITHUB_SHA}"
+          echo "GITHUB_REPOSITORY=${GITHUB_REPOSITORY}"
+          git branch --show-current
+          git remote -v
+
       - name: Build
         run: npm run build
+
+      - name: Inspect generated dist
+        run: |
+          pwd
+          ls -la dist
+          find dist -maxdepth 2 -type f | sort
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
@@ -39,3 +54,6 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
           publish_branch: gh-pages
+          commit_message: Deploy GitHub Pages from ${{ github.ref_name }} @ ${{ github.sha }}
+          allow_empty_commit: true
+          enable_jekyll: false
