@@ -2,6 +2,23 @@ const STORAGE_KEY = 'invoice_api_key';
 const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 const DEFAULT_KEY = import.meta.env.VITE_API_KEY || '';
 
+export const EXPENSE_TYPES = [
+  'clinic_tools',
+  'client_support',
+  'clinic_hygiene',
+  'office_admin',
+  'communication',
+  'clinical_supervision',
+  'clinical_training',
+  'car_expenses',
+  'travel_abroad',
+  'rent_and_bills',
+  'other'
+];
+
+export const STATUS_VALUES = ['draft', 'confirmed'];
+export const SOURCE_VALUES = ['camera_invoice', 'Monzo_csv'];
+
 export function setApiKey(key) {
   localStorage.setItem(STORAGE_KEY, key);
 }
@@ -18,6 +35,18 @@ function buildHeaders(extra = {}) {
   };
 }
 
+function mapErrorMessage(status, fallback) {
+  const byStatus = {
+    400: 'Unsupported file format or MIME type.',
+    404: 'Invoice not found.',
+    413: 'File too large.',
+    500: 'Server error while processing request.',
+    502: 'Upstream service failed. Please try again.',
+    504: 'Processing timeout. Please retry upload.'
+  };
+  return byStatus[status] || fallback;
+}
+
 async function request(path, options = {}) {
   if (!API_URL) {
     throw new Error('Missing VITE_API_URL configuration');
@@ -28,15 +57,12 @@ async function request(path, options = {}) {
     headers: buildHeaders(options.headers)
   });
 
-  if (res.status === 401) {
-    const error = new Error('Unauthorized - invalid key');
-    error.code = 401;
-    throw error;
-  }
-
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(body || `Request failed: ${res.status}`);
+    const message = mapErrorMessage(res.status, body || `Request failed: ${res.status}`);
+    const error = new Error(message);
+    error.code = res.status;
+    throw error;
   }
 
   const contentType = res.headers.get('content-type') || '';
@@ -71,4 +97,14 @@ export function confirmInvoice(id) {
   return request(`/invoice/${id}/confirm`, {
     method: 'POST'
   });
+}
+
+export function getLatestInvoices(n = 10) {
+  const parsed = Number(n);
+  const safeN = Number.isFinite(parsed) ? Math.min(100, Math.max(1, Math.trunc(parsed))) : 10;
+  return request(`/invoices/latest?n=${safeN}`);
+}
+
+export function getCredits() {
+  return request('/llm/credits');
 }
