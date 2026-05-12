@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Invoice Frontend</title>
+    <script type="module" crossorigin src="/invoice-frontend/assets/index-BIoCtidx.js"></script>
+    <link rel="stylesheet" crossorigin href="/invoice-frontend/assets/index-C1BpLa64.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      window.setTimeout(() => {
+        const root = document.getElementById('root');
+        if (!root || root.childElementCount > 0) return;
+
+        const isGitHubPages = window.location.hostname.endsWith('github.io');
+        if (!isGitHubPages) return;
+
+        root.innerHTML = `
+          <div style="max-width:600px;margin:24px auto;padding:16px;border:1px solid #fecaca;border-radius:12px;background:#fef2f2;color:#991b1b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.5;">
+            <h2 style="margin:0 0 8px 0;font-size:20px;">Deployment configuration issue</h2>
+            <p style="margin:0 0 8px 0;">This page is loading the source entry file <code>/src/main.jsx</code> instead of the production <code>dist</code> build, so the app cannot start.</p>
+            <p style="margin:0;">In GitHub Pages settings, set <strong>Source</strong> to <strong>GitHub Actions</strong> and run the <strong>Deploy to GitHub Pages</strong> workflow, or deploy the <code>dist</code> folder to the <code>gh-pages</code> branch.</p>
+          </div>
+        `;
+      }, 1500);
+    </script>
+  </body>
+</html>
