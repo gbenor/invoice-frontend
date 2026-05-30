@@ -3,7 +3,7 @@ const DEFAULT_API_URL = 'https://invoice-production-a0d7.up.railway.app';
 const API_URL = (import.meta.env.VITE_API_URL || DEFAULT_API_URL).replace(/\/$/, '');
 const API_BASE_PATH = `/${(import.meta.env.VITE_API_BASE_PATH || '').replace(/^\/+|\/+$/g, '')}`.replace(/^\/$/, '');
 const DEFAULT_KEY = import.meta.env.VITE_API_KEY || '';
-const AUTH_MODE = (import.meta.env.VITE_API_AUTH_MODE || 'x-api-key').toLowerCase();
+const AUTH_MODE = (import.meta.env.VITE_API_AUTH_MODE || 'query').toLowerCase();
 const AUTH_QUERY_PARAM = import.meta.env.VITE_API_AUTH_QUERY_PARAM || 'api_key';
 const AUTH_HEADER_NAME = import.meta.env.VITE_API_AUTH_HEADER_NAME || 'x-api-key';
 
@@ -75,7 +75,7 @@ function mapErrorMessage(status, fallback) {
     401: 'Unauthorized - invalid or missing API key.',
     403: 'Unauthorized - invalid or missing API key.',
     404: 'Invoice not found.',
-    405: 'Backend route does not allow this request method. Check the configured API URL and route prefix.',
+    405: 'Backend route does not allow this request method. This can happen if a cross-origin preflight reaches a backend without OPTIONS support; use query auth or enable CORS OPTIONS on the backend.',
     413: 'File too large.',
     500: 'Server error while processing request.',
     502: 'Upstream service failed. Please try again.',

@@ -18,7 +18,7 @@ function Home({ apiKey, onSaveApiKey, onScan, latestInvoices, onOpenInvoice }) {
 
       <section className="card">
         <h3>API authentication</h3>
-        <p className="muted">Enter the backend API key. It is saved in this browser and sent as an x-api-key header with each API request.</p>
+        <p className="muted">Enter the backend API key. It is saved in this browser and sent as the api_key query parameter with each API request to avoid browser OPTIONS preflight failures.</p>
         <form onSubmit={handleAuthSubmit}>
           <label className="field">
             <span>Auth key</span>

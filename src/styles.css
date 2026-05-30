@@ -69,3 +69,27 @@ button:disabled { opacity: 0.6; }
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+.version-badge {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: calc(100vw - 24px);
+  padding: 8px 10px;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  background: rgba(239, 246, 255, 0.96);
+  color: #1e3a8a;
+  font-size: 12px;
+  line-height: 1.2;
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.14);
+}
+
+.version-badge__build {
+  color: #1d4ed8;
+  font-size: 10px;
+}

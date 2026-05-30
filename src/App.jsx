@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import AuthScreen from './components/AuthScreen';
+import VersionBadge from './components/VersionBadge';
 import Home from './pages/Home';
 import Upload from './pages/Upload';
 import Result from './pages/Result';
@@ -105,7 +106,14 @@ function App() {
     setScreen('home');
   }
 
-  if (screen === 'auth') return <AuthScreen error={authError} initialKey={apiKey} onContinue={saveAuthKey} />;
+  if (screen === 'auth') {
+    return (
+      <>
+        <AuthScreen error={authError} initialKey={apiKey} onContinue={saveAuthKey} />
+        <VersionBadge />
+      </>
+    );
+  }
 
   return (
     <>
@@ -113,6 +121,7 @@ function App() {
       {screen === 'home' ? <Home apiKey={apiKey} onSaveApiKey={saveAuthKey} onScan={() => setScreen('upload')} latestInvoices={latestInvoices} onOpenInvoice={openInvoice} /> : null}
       {screen === 'upload' ? <Upload file={file} previewUrl={previewUrl} onFileSelect={setFile} onUpload={handleUpload} uploading={uploading} /> : null}
       {screen === 'result' ? <Result formData={invoiceData} onChange={(key, value) => setInvoiceData((prev) => ({ ...prev, [key]: value }))} onSave={handleSave} onConfirm={handleConfirm} saving={saving} confirming={confirming} /> : null}
+      <VersionBadge />
     </>
   );
 }
