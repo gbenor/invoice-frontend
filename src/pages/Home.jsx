@@ -18,7 +18,7 @@ function Home({ apiKey, onSaveApiKey, onScan, latestInvoices, onOpenInvoice }) {
 
       <section className="card">
         <h3>API authentication</h3>
-        <p className="muted">Enter the backend API key. It is saved in this browser and sent as an Authorization: Bearer token with each API request, matching the backend curl example.</p>
+        <p className="muted">Enter the backend API key. It is saved in this browser and sent as an api_key query parameter so cross-origin GETs and file uploads do not trigger CORS OPTIONS preflights.</p>
         <form onSubmit={handleAuthSubmit}>
           <label className="field">
             <span>Auth key</span>

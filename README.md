@@ -23,7 +23,7 @@ Set env values in `.env`:
 - `VITE_API_URL`: backend base URL (defaults to `https://invoice-production-a0d7.up.railway.app`)
 - `VITE_API_KEY`: optional default key (app uses user-entered key from localStorage)
 - `VITE_API_BASE_PATH`: optional backend route prefix, for example `/api` if the backend mounts routes under `/api`
-- `VITE_API_AUTH_MODE`: optional auth transport; defaults to `bearer` to match the backend `Authorization: Bearer <key>` examples. Set to `x-api-key`, `query`, `header`, or `none` only if the backend is changed to expect that mode.
+- `VITE_API_AUTH_MODE`: optional auth transport; defaults to `query` so browser requests include `?api_key=<key>` and avoid CORS `OPTIONS` preflights for cross-origin GET requests and multipart uploads. Set to `bearer`, `x-api-key`, `header`, or `none` only if the backend and CORS policy support that mode.
 - `VITE_API_AUTH_QUERY_PARAM`: optional query auth parameter name; defaults to `api_key`
 - `VITE_API_AUTH_HEADER_NAME`: optional custom header name when using `header`/`x-api-key`; defaults to `x-api-key`
 - `VITE_APP_VERSION`: optional visible app version override; defaults to `package.json` version
@@ -96,15 +96,16 @@ This publishes `dist` to the `gh-pages` branch via the `gh-pages` package.
 - `PUT /invoice/{id}`
 - `POST /invoice/{id}/confirm`
 
-By default, authenticated requests include the saved key in the backend-compatible bearer header:
+By default, authenticated requests include the saved key in the query string:
 
 ```http
-Authorization: Bearer <stored access key>
+GET /invoices/latest?n=10&api_key=<stored access key>
+POST /upload?api_key=<stored access key>
 ```
 
-If a deployed environment still has `VITE_API_AUTH_MODE=query` set from an older build, remove that override or set it to `bearer` so requests use this header instead of `?api_key=...`.
+This avoids the browser `OPTIONS` preflight that is triggered by `Authorization` and other custom auth headers on cross-origin requests. If a deployed environment still has `VITE_API_AUTH_MODE=bearer`, `header`, or `x-api-key` set, remove that override or set it to `query` so `/invoices/latest` and `/upload` can reach the backend without an `OPTIONS` request.
 
-This matches the backend upload example:
+If the backend only accepts bearer auth, it must enable CORS for `OPTIONS` and the `Authorization` header before a browser-hosted frontend can use this example:
 
 ```bash
 curl -X POST http://localhost:8000/upload \
@@ -112,7 +113,7 @@ curl -X POST http://localhost:8000/upload \
   -F "file=@/path/to/invoice.jpg;type=image/jpeg"
 ```
 
-The router paths used by the frontend match the FastAPI router: `/upload`, `/debug-upload`, `/upload/monzo-csv`, `/upload/amazon-csv`, `/invoice/send`, `/invoices/latest`, `/invoice/{id}`, and `/invoice/{id}/confirm`. Because browser `Authorization` headers trigger a CORS preflight, the backend must allow `OPTIONS` requests and the `Authorization` header for cross-origin deployments.
+The router paths used by the frontend match the FastAPI router: `/upload`, `/debug-upload`, `/upload/monzo-csv`, `/upload/amazon-csv`, `/invoice/send`, `/invoices/latest`, `/invoice/{id}`, and `/invoice/{id}/confirm`. Cross-origin `PUT /invoice/{id}` requests still require backend CORS `OPTIONS` support because `PUT` is not a browser simple request.
 
 ## If you see a 404 on GitHub Pages
 
