@@ -23,9 +23,12 @@ Set env values in `.env`:
 - `VITE_API_URL`: backend base URL (defaults to `https://invoice-production-a0d7.up.railway.app`)
 - `VITE_API_KEY`: optional default key (app uses user-entered key from localStorage)
 - `VITE_API_BASE_PATH`: optional backend route prefix, for example `/api` if the backend mounts routes under `/api`
-- `VITE_API_AUTH_MODE`: optional auth transport; defaults to `x-api-key` to match the backend API-key header. Set to `bearer`, `query`, `header`, or `none` only if the backend is changed to expect that mode.
+- `VITE_API_AUTH_MODE`: optional auth transport; defaults to `bearer` to match the backend `Authorization: Bearer <key>` examples. Set to `x-api-key`, `query`, `header`, or `none` only if the backend is changed to expect that mode.
 - `VITE_API_AUTH_QUERY_PARAM`: optional query auth parameter name; defaults to `api_key`
 - `VITE_API_AUTH_HEADER_NAME`: optional custom header name when using `header`/`x-api-key`; defaults to `x-api-key`
+- `VITE_APP_VERSION`: optional visible app version override; defaults to `package.json` version
+- `VITE_BUILD_TIME`: optional visible build timestamp override; defaults to build time
+- `VITE_GIT_SHA`: optional visible short commit override; defaults to the current short git SHA when available
 - `VITE_BASE_PATH`: optional frontend base path override (for local custom testing)
 
 ## Run locally
@@ -93,13 +96,21 @@ This publishes `dist` to the `gh-pages` branch via the `gh-pages` package.
 - `PUT /invoice/{id}`
 - `POST /invoice/{id}/confirm`
 
-By default, authenticated requests include the saved key as the backend API-key header:
+By default, authenticated requests include the saved key in the backend-compatible bearer header:
 
 ```http
-x-api-key: <stored access key>
+Authorization: Bearer <stored access key>
 ```
 
-The router paths used by the frontend match the FastAPI router: `/upload`, `/debug-upload`, `/upload/monzo-csv`, `/upload/amazon-csv`, `/invoice/send`, `/invoices/latest`, `/invoice/{id}`, and `/invoice/{id}/confirm`. Because browser auth headers trigger a CORS preflight, the backend must allow `OPTIONS` requests and the `x-api-key` header for cross-origin deployments.
+This matches the backend upload example:
+
+```bash
+curl -X POST http://localhost:8000/upload \
+  -H "Authorization: Bearer key1" \
+  -F "file=@/path/to/invoice.jpg;type=image/jpeg"
+```
+
+The router paths used by the frontend match the FastAPI router: `/upload`, `/debug-upload`, `/upload/monzo-csv`, `/upload/amazon-csv`, `/invoice/send`, `/invoices/latest`, `/invoice/{id}`, and `/invoice/{id}/confirm`. Because browser `Authorization` headers trigger a CORS preflight, the backend must allow `OPTIONS` requests and the `Authorization` header for cross-origin deployments.
 
 ## If you see a 404 on GitHub Pages
 
