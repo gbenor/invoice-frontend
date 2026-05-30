@@ -102,6 +102,8 @@ By default, authenticated requests include the saved key in the backend-compatib
 Authorization: Bearer <stored access key>
 ```
 
+If a deployed environment still has `VITE_API_AUTH_MODE=query` set from an older build, remove that override or set it to `bearer` so requests use this header instead of `?api_key=...`.
+
 This matches the backend upload example:
 
 ```bash
