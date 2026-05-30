@@ -13,7 +13,7 @@ function AuthScreen({ initialKey = '', onContinue, error }) {
     <main className="container centered">
       <form className="card" onSubmit={handleSubmit}>
         <h1>Invoice Scanner</h1>
-        <p>Enter the backend API key for invoice-production-a0d7.up.railway.app.</p>
+        <p>Enter the backend API key for invoice-production-a0d7.up.railway.app. The app sends it as an api_key query parameter to avoid browser CORS preflight failures.</p>
         <input
           type="password"
           value={key}
