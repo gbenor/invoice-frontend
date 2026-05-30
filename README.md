@@ -5,8 +5,8 @@ Minimal mobile-first React app for scanning invoices from iPhone Safari and send
 ## Features
 
 - Camera capture support for iPhone Safari using `capture="environment"`
-- PDF and image upload support
-- Simple API-key gate stored in `localStorage`
+- PNG/JPG/JPEG image upload support aligned with the backend
+- API-key entry on the auth screen and home screen, stored in `localStorage`
 - Upload / process / edit / save / confirm flow
 - GitHub Pages deploy-ready with Vite + GitHub Actions
 
@@ -20,7 +20,7 @@ cp .env.example .env
 
 Set env values in `.env`:
 
-- `VITE_API_URL`: backend base URL (Railway deployment URL)
+- `VITE_API_URL`: backend base URL (defaults to `https://invoice-production-a0d7.up.railway.app`)
 - `VITE_API_KEY`: optional default key (app uses user-entered key from localStorage)
 - `VITE_BASE_PATH`: optional base path override (for local custom testing)
 
@@ -48,7 +48,7 @@ Push this repo to GitHub and make sure your default branch is `main`.
 
 In **GitHub → Settings → Secrets and variables → Actions**, add:
 
-- `VITE_API_URL` (required)
+- `VITE_API_URL` (optional; overrides the default Railway backend)
 - `VITE_API_KEY` (optional)
 
 ### 3) Enable Pages from Actions
@@ -83,11 +83,12 @@ This publishes `dist` to the `gh-pages` branch via the `gh-pages` package.
 - `GET /invoice/{id}`
 - `PUT /invoice/{id}`
 - `POST /invoice/{id}/confirm`
+- `GET /invoices/latest?n=<1..100>`
 
-All requests include:
+All authenticated requests include the saved key as a Bearer token:
 
 ```http
-x-api-key: <stored access key>
+Authorization: Bearer <stored access key>
 ```
 
 ## If you see a 404 on GitHub Pages

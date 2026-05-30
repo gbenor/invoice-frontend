@@ -3,41 +3,42 @@ import AuthScreen from './components/AuthScreen';
 import Home from './pages/Home';
 import Upload from './pages/Upload';
 import Result from './pages/Result';
-import { confirmInvoice, getApiKey, getCredits, getInvoice, getLatestInvoices, setApiKey, updateInvoice, uploadInvoice } from './api/api';
+import { clearApiKey, confirmInvoice, getApiKey, getInvoice, getLatestInvoices, setApiKey, updateInvoice, uploadInvoice } from './api/api';
 
 const EDITABLE_FIELDS = ['date', 'merchant', 'total_amount', 'currency', 'expense_type', 'note_from_user', 'llm_summary', 'short_title', 'source'];
 
 function App() {
   const [screen, setScreen] = useState('auth');
+  const [apiKey, setStoredApiKey] = useState(() => getApiKey());
   const [authError, setAuthError] = useState('');
   const [globalError, setGlobalError] = useState('');
   const [file, setFile] = useState(null);
   const [invoiceId, setInvoiceId] = useState('');
   const [invoiceData, setInvoiceData] = useState({});
   const [latestInvoices, setLatestInvoices] = useState([]);
-  const [credits, setCredits] = useState(null);
-  const [creditsError, setCreditsError] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
-  useEffect(() => { if (getApiKey()) setScreen('home'); }, []);
+  useEffect(() => { if (apiKey) setScreen('home'); }, [apiKey]);
 
   useEffect(() => {
     if (screen !== 'home' && screen !== 'upload') return;
-    getLatestInvoices(10).then(setLatestInvoices).catch(() => {});
-    getCredits().then((v) => { setCredits(v); setCreditsError(false); }).catch(() => setCreditsError(true));
+    getLatestInvoices(10).then(setLatestInvoices).catch((error) => {
+      if (error.code === 401 || error.code === 403) handleUnauthorized();
+    });
   }, [screen]);
 
   const previewUrl = useMemo(() => {
-    if (!file || file.type === 'application/pdf') return '';
+    if (!file) return '';
     return URL.createObjectURL(file);
   }, [file]);
 
   useEffect(() => () => previewUrl && URL.revokeObjectURL(previewUrl), [previewUrl]);
 
   function handleUnauthorized() {
-    localStorage.removeItem('invoice_api_key');
+    clearApiKey();
+    setStoredApiKey('');
     setAuthError('Unauthorized - invalid key');
     setScreen('auth');
   }
@@ -53,7 +54,7 @@ function App() {
       setInvoiceData({ id, ...(uploadRes?.structured || {}) });
       setScreen('result');
     } catch (error) {
-      if (error.code === 401) handleUnauthorized();
+      if (error.code === 401 || error.code === 403) handleUnauthorized();
       else { setGlobalError(error.message || 'Upload failed'); setScreen('upload'); }
     } finally { setUploading(false); }
   }
@@ -65,7 +66,8 @@ function App() {
       setInvoiceData(invoice);
       setScreen('result');
     } catch (error) {
-      setGlobalError(error.message || 'Failed to load invoice');
+      if (error.code === 401 || error.code === 403) handleUnauthorized();
+      else setGlobalError(error.message || 'Failed to load invoice');
     }
   }
 
@@ -76,7 +78,7 @@ function App() {
       const updated = await updateInvoice(invoiceId, payload);
       setInvoiceData(updated || invoiceData);
     } catch (error) {
-      if (error.code === 401) handleUnauthorized();
+      if (error.code === 401 || error.code === 403) handleUnauthorized();
       else setGlobalError(error.message || 'Save failed');
     } finally { setSaving(false); }
   }
@@ -89,18 +91,27 @@ function App() {
       setScreen('home');
       setFile(null);
     } catch (error) {
-      if (error.code === 401) handleUnauthorized();
+      if (error.code === 401 || error.code === 403) handleUnauthorized();
       else setGlobalError(error.message || 'Confirm failed');
     } finally { setConfirming(false); }
   }
 
-  if (screen === 'auth') return <AuthScreen error={authError} initialKey={getApiKey()} onContinue={(key) => { setApiKey(key); setAuthError(''); setScreen('home'); }} />;
+  function saveAuthKey(key) {
+    const trimmed = key.trim();
+    setApiKey(trimmed);
+    setStoredApiKey(trimmed);
+    setAuthError('');
+    setGlobalError('');
+    setScreen('home');
+  }
+
+  if (screen === 'auth') return <AuthScreen error={authError} initialKey={apiKey} onContinue={saveAuthKey} />;
 
   return (
     <>
       {globalError ? <p className="banner error">{globalError}</p> : null}
-      {screen === 'home' ? <Home onScan={() => setScreen('upload')} latestInvoices={latestInvoices} onOpenInvoice={openInvoice} /> : null}
-      {screen === 'upload' ? <Upload file={file} previewUrl={previewUrl} onFileSelect={setFile} onUpload={handleUpload} uploading={uploading} credits={credits} creditsError={creditsError} /> : null}
+      {screen === 'home' ? <Home apiKey={apiKey} onSaveApiKey={saveAuthKey} onScan={() => setScreen('upload')} latestInvoices={latestInvoices} onOpenInvoice={openInvoice} /> : null}
+      {screen === 'upload' ? <Upload file={file} previewUrl={previewUrl} onFileSelect={setFile} onUpload={handleUpload} uploading={uploading} /> : null}
       {screen === 'result' ? <Result formData={invoiceData} onChange={(key, value) => setInvoiceData((prev) => ({ ...prev, [key]: value }))} onSave={handleSave} onConfirm={handleConfirm} saving={saving} confirming={confirming} /> : null}
     </>
   );

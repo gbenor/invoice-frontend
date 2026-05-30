@@ -2,18 +2,19 @@ function CameraUpload({ onFileSelect, file }) {
   return (
     <div className="card">
       <h2>Upload Invoice</h2>
+      <p className="muted">Backend accepts PNG, JPG, and JPEG image files only.</p>
       <label className="label">Take photo (rear camera)</label>
       <input
         type="file"
-        accept="image/*"
+        accept="image/png,image/jpeg"
         capture="environment"
         onChange={(e) => onFileSelect(e.target.files?.[0] || null)}
       />
 
-      <label className="label">Or upload PDF / image</label>
+      <label className="label">Or upload image</label>
       <input
         type="file"
-        accept="application/pdf,image/*"
+        accept="image/png,image/jpeg"
         onChange={(e) => onFileSelect(e.target.files?.[0] || null)}
       />
 
