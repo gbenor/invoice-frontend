@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'invoice_api_key';
-const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const DEFAULT_API_URL = 'https://invoice-production-a0d7.up.railway.app';
+const API_URL = (import.meta.env.VITE_API_URL || DEFAULT_API_URL).replace(/\/$/, '');
 const DEFAULT_KEY = import.meta.env.VITE_API_KEY || '';
 
 export const EXPENSE_TYPES = [
@@ -17,27 +18,35 @@ export const EXPENSE_TYPES = [
 ];
 
 export const STATUS_VALUES = ['draft', 'confirmed'];
-export const SOURCE_VALUES = ['camera_invoice', 'Monzo_csv'];
+export const SOURCE_VALUES = ['camera_invoice', 'monzo_csv', 'amazon_csv'];
 
 export function setApiKey(key) {
-  localStorage.setItem(STORAGE_KEY, key);
+  const trimmed = key.trim();
+  if (trimmed) localStorage.setItem(STORAGE_KEY, trimmed);
+  else localStorage.removeItem(STORAGE_KEY);
 }
 
 export function getApiKey() {
   return localStorage.getItem(STORAGE_KEY) || DEFAULT_KEY;
 }
 
+export function clearApiKey() {
+  localStorage.removeItem(STORAGE_KEY);
+}
+
 function buildHeaders(extra = {}) {
   const key = getApiKey();
   return {
-    'x-api-key': key,
+    ...(key ? { Authorization: `Bearer ${key}` } : {}),
     ...extra
   };
 }
 
 function mapErrorMessage(status, fallback) {
   const byStatus = {
-    400: 'Unsupported file format or MIME type.',
+    400: 'Unsupported file format, MIME type, or invalid request data.',
+    401: 'Unauthorized - invalid or missing API key.',
+    403: 'Unauthorized - invalid or missing API key.',
     404: 'Invoice not found.',
     413: 'File too large.',
     500: 'Server error while processing request.',
@@ -48,10 +57,6 @@ function mapErrorMessage(status, fallback) {
 }
 
 async function request(path, options = {}) {
-  if (!API_URL) {
-    throw new Error('Missing VITE_API_URL configuration');
-  }
-
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: buildHeaders(options.headers)
@@ -103,8 +108,4 @@ export function getLatestInvoices(n = 10) {
   const parsed = Number(n);
   const safeN = Number.isFinite(parsed) ? Math.min(100, Math.max(1, Math.trunc(parsed))) : 10;
   return request(`/invoices/latest?n=${safeN}`);
-}
-
-export function getCredits() {
-  return request('/llm/credits');
 }

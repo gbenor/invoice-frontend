@@ -13,16 +13,16 @@ function AuthScreen({ initialKey = '', onContinue, error }) {
     <main className="container centered">
       <form className="card" onSubmit={handleSubmit}>
         <h1>Invoice Scanner</h1>
-        <p>Enter access key</p>
+        <p>Enter the backend API key for invoice-production-a0d7.up.railway.app.</p>
         <input
-          type="text"
+          type="password"
           value={key}
           onChange={(e) => setKey(e.target.value)}
-          placeholder="Access key"
+          placeholder="Backend API key"
           autoComplete="off"
         />
         {error ? <p className="error">{error}</p> : null}
-        <button type="submit">Continue</button>
+        <button type="submit">Save and continue</button>
       </form>
     </main>
   );
