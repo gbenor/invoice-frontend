@@ -5,7 +5,7 @@ import Home from './pages/Home';
 import TokenUpdate from './pages/TokenUpdate';
 import Upload from './pages/Upload';
 import Result from './pages/Result';
-import { clearApiKey, confirmInvoice, downloadDatabase, getApiKey, getInvoice, getLatestInvoices, setApiKey, updateInvoice, uploadInvoice } from './api/api';
+import { clearApiKey, confirmInvoice, downloadDatabase, getApiKey, getInvoice, getLatestInvoices, setApiKey, updateInvoice, uploadDatabase, uploadInvoice } from './api/api';
 import { getDateInputValueOrToday } from './utils/dateInput';
 
 const EDITABLE_FIELDS = ['date', 'merchant', 'total_amount', 'currency', 'expense_type', 'note_from_user', 'llm_summary', 'short_title'];
@@ -22,6 +22,8 @@ function App() {
   const [uploading, setUploading] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [downloadingDatabase, setDownloadingDatabase] = useState(false);
+  const [uploadingDatabase, setUploadingDatabase] = useState(false);
+  const [globalMessage, setGlobalMessage] = useState('');
 
   useEffect(() => { if (apiKey && screen === 'auth') setScreen('home'); }, [apiKey, screen]);
 
@@ -50,6 +52,7 @@ function App() {
   async function handleUpload() {
     if (!file) return;
     setGlobalError('');
+    setGlobalMessage('');
     setUploading(true);
     try {
       const uploadRes = await uploadInvoice(file);
@@ -104,7 +107,7 @@ function App() {
   }
 
   async function handleDownloadDatabase() {
-    setDownloadingDatabase(true); setGlobalError('');
+    setDownloadingDatabase(true); setGlobalError(''); setGlobalMessage('');
     try {
       await downloadDatabase();
     } catch (error) {
@@ -113,12 +116,40 @@ function App() {
     } finally { setDownloadingDatabase(false); }
   }
 
+
+  async function refreshLatestInvoices() {
+    try {
+      setLatestInvoices(await getLatestInvoices(10));
+    } catch (error) {
+      if (error.code === 401 || error.code === 403) handleUnauthorized();
+      else setGlobalError(error.message || 'Failed to load recent invoices');
+    }
+  }
+
+  async function handleDatabaseUpload(databaseFile) {
+    setUploadingDatabase(true); setGlobalError(''); setGlobalMessage('');
+    try {
+      const result = await uploadDatabase(databaseFile);
+      const serverMessage = typeof result.message === 'string'
+        ? result.message
+        : result.message?.message || result.message?.status;
+      setGlobalMessage(result.downloadedPreviousDatabase
+        ? `Database uploaded successfully. Previous database downloaded as ${result.filename}.`
+        : serverMessage || 'Database uploaded successfully. No previous database was available to download.');
+      await refreshLatestInvoices();
+    } catch (error) {
+      if (error.code === 401 || error.code === 403) handleUnauthorized();
+      else setGlobalError(error.message || 'Database upload failed');
+    } finally { setUploadingDatabase(false); }
+  }
+
   function saveAuthKey(key) {
     const trimmed = key.trim();
     setApiKey(trimmed);
     setStoredApiKey(trimmed);
     setAuthError('');
     setGlobalError('');
+    setGlobalMessage('');
     setScreen('home');
   }
 
@@ -134,7 +165,8 @@ function App() {
   return (
     <>
       {globalError ? <p className="banner error">{globalError}</p> : null}
-      {screen === 'home' ? <Home onTokenUpdate={() => setScreen('token')} onDownloadDatabase={handleDownloadDatabase} onScan={() => setScreen('upload')} latestInvoices={latestInvoices} onOpenInvoice={openInvoice} downloadingDatabase={downloadingDatabase} /> : null}
+      {globalMessage ? <p className="banner success">{globalMessage}</p> : null}
+      {screen === 'home' ? <Home onTokenUpdate={() => setScreen('token')} onDownloadDatabase={handleDownloadDatabase} onDatabaseFileSelect={handleDatabaseUpload} onScan={() => setScreen('upload')} latestInvoices={latestInvoices} onOpenInvoice={openInvoice} downloadingDatabase={downloadingDatabase} uploadingDatabase={uploadingDatabase} /> : null}
       {screen === 'token' ? <TokenUpdate apiKey={apiKey} onBack={() => setScreen('home')} onSaveApiKey={saveAuthKey} /> : null}
       {screen === 'upload' ? <Upload file={file} previewUrl={previewUrl} onFileSelect={setFile} onUpload={handleUpload} uploading={uploading} /> : null}
       {screen === 'result' ? <Result formData={invoiceData} onChange={(key, value) => setInvoiceData((prev) => ({ ...prev, [key]: value }))} onCancel={handleCancelResult} onConfirm={handleConfirm} confirming={confirming} /> : null}
