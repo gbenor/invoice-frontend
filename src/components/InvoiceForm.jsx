@@ -1,46 +1,38 @@
-import { EXPENSE_TYPES, SOURCE_VALUES, STATUS_VALUES } from '../api/api';
+import { EXPENSE_TYPES } from '../api/api';
 
-function InvoiceForm({ formData, onChange, onSave, onConfirm, saving, confirming }) {
+const CURRENCIES = ['GBP', 'EUR', 'ILS', 'USD'];
+
+function InvoiceForm({ formData, onChange, onCancel, onConfirm, confirming }) {
+  const textFields = ['date', 'merchant', 'total_amount', 'note_from_user', 'llm_summary', 'short_title'];
+
   return (
     <section className="card">
       <h2>Invoice Details</h2>
 
-      <label className="field">
-        <span>ID</span>
-        <input type="text" value={formData.id || ''} readOnly />
-      </label>
-
-      <label className="field">
-        <span>Status</span>
-        <select value={formData.status || 'draft'} onChange={(e) => onChange('status', e.target.value)}>
-          {STATUS_VALUES.map((v) => <option key={v} value={v}>{v}</option>)}
-        </select>
-      </label>
-
-      {['date', 'merchant', 'total_amount', 'currency', 'note_from_user', 'llm_summary', 'short_title'].map((key) => (
+      {textFields.map((key) => (
         <label key={key} className="field">
           <span>{key}</span>
-          <input type="text" value={formData[key] || ''} onChange={(e) => onChange(key, e.target.value)} />
+          <input type="text" value={formData[key] || ''} onChange={(event) => onChange(key, event.target.value)} />
         </label>
       ))}
 
       <label className="field">
-        <span>expense_type</span>
-        <select value={formData.expense_type || 'other'} onChange={(e) => onChange('expense_type', e.target.value)}>
-          {EXPENSE_TYPES.map((v) => <option key={v} value={v}>{v}</option>)}
+        <span>currency</span>
+        <select value={formData.currency || ''} onChange={(event) => onChange('currency', event.target.value)}>
+          {CURRENCIES.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
         </select>
       </label>
 
       <label className="field">
-        <span>source</span>
-        <select value={formData.source || 'camera_invoice'} onChange={(e) => onChange('source', e.target.value)}>
-          {SOURCE_VALUES.map((v) => <option key={v} value={v}>{v}</option>)}
+        <span>expense_type</span>
+        <select value={formData.expense_type || 'other'} onChange={(event) => onChange('expense_type', event.target.value)}>
+          {EXPENSE_TYPES.map((value) => <option key={value} value={value}>{value}</option>)}
         </select>
       </label>
 
       <div className="actions">
-        <button onClick={onSave} disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
-        <button onClick={onConfirm} disabled={confirming}>{confirming ? 'Confirming...' : 'Confirm'}</button>
+        <button type="button" className="secondary" onClick={onCancel} disabled={confirming}>Cancel</button>
+        <button type="button" onClick={onConfirm} disabled={confirming}>{confirming ? 'Confirming...' : 'Confirm'}</button>
       </div>
     </section>
   );

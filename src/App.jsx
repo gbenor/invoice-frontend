@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import AuthScreen from './components/AuthScreen';
 import VersionBadge from './components/VersionBadge';
 import Home from './pages/Home';
+import TokenUpdate from './pages/TokenUpdate';
 import Upload from './pages/Upload';
 import Result from './pages/Result';
-import { clearApiKey, confirmInvoice, getApiKey, getInvoice, getLatestInvoices, setApiKey, updateInvoice, uploadInvoice } from './api/api';
+import { clearApiKey, confirmInvoice, downloadDatabase, getApiKey, getInvoice, getLatestInvoices, setApiKey, updateInvoice, uploadInvoice } from './api/api';
 
-const EDITABLE_FIELDS = ['date', 'merchant', 'total_amount', 'currency', 'expense_type', 'note_from_user', 'llm_summary', 'short_title', 'source'];
+const EDITABLE_FIELDS = ['date', 'merchant', 'total_amount', 'currency', 'expense_type', 'note_from_user', 'llm_summary', 'short_title'];
 
 function App() {
   const [screen, setScreen] = useState('auth');
@@ -18,10 +19,10 @@ function App() {
   const [invoiceData, setInvoiceData] = useState({});
   const [latestInvoices, setLatestInvoices] = useState([]);
   const [uploading, setUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [downloadingDatabase, setDownloadingDatabase] = useState(false);
 
-  useEffect(() => { if (apiKey) setScreen('home'); }, [apiKey]);
+  useEffect(() => { if (apiKey && screen === 'auth') setScreen('home'); }, [apiKey, screen]);
 
   useEffect(() => {
     if (screen !== 'home' && screen !== 'upload') return;
@@ -73,21 +74,14 @@ function App() {
     }
   }
 
-  async function handleSave() {
-    setSaving(true); setGlobalError('');
-    try {
-      const payload = Object.fromEntries(EDITABLE_FIELDS.map((k) => [k, invoiceData[k]]));
-      const updated = await updateInvoice(invoiceId, payload);
-      setInvoiceData(updated || invoiceData);
-    } catch (error) {
-      if (error.code === 401 || error.code === 403) handleUnauthorized();
-      else setGlobalError(error.message || 'Save failed');
-    } finally { setSaving(false); }
+  function buildInvoicePayload() {
+    return Object.fromEntries(EDITABLE_FIELDS.map((key) => [key, invoiceData[key]]));
   }
 
   async function handleConfirm() {
     setConfirming(true); setGlobalError('');
     try {
+      await updateInvoice(invoiceId, buildInvoicePayload());
       const updated = await confirmInvoice(invoiceId);
       setInvoiceData(updated || invoiceData);
       setScreen('home');
@@ -96,6 +90,23 @@ function App() {
       if (error.code === 401 || error.code === 403) handleUnauthorized();
       else setGlobalError(error.message || 'Confirm failed');
     } finally { setConfirming(false); }
+  }
+
+  function handleCancelResult() {
+    setInvoiceId('');
+    setInvoiceData({});
+    setFile(null);
+    setScreen('home');
+  }
+
+  async function handleDownloadDatabase() {
+    setDownloadingDatabase(true); setGlobalError('');
+    try {
+      await downloadDatabase();
+    } catch (error) {
+      if (error.code === 401 || error.code === 403) handleUnauthorized();
+      else setGlobalError(error.message || 'Database download failed');
+    } finally { setDownloadingDatabase(false); }
   }
 
   function saveAuthKey(key) {
@@ -119,9 +130,10 @@ function App() {
   return (
     <>
       {globalError ? <p className="banner error">{globalError}</p> : null}
-      {screen === 'home' ? <Home apiKey={apiKey} onSaveApiKey={saveAuthKey} onScan={() => setScreen('upload')} latestInvoices={latestInvoices} onOpenInvoice={openInvoice} /> : null}
+      {screen === 'home' ? <Home onTokenUpdate={() => setScreen('token')} onDownloadDatabase={handleDownloadDatabase} onScan={() => setScreen('upload')} latestInvoices={latestInvoices} onOpenInvoice={openInvoice} downloadingDatabase={downloadingDatabase} /> : null}
+      {screen === 'token' ? <TokenUpdate apiKey={apiKey} onBack={() => setScreen('home')} onSaveApiKey={saveAuthKey} /> : null}
       {screen === 'upload' ? <Upload file={file} previewUrl={previewUrl} onFileSelect={setFile} onUpload={handleUpload} uploading={uploading} /> : null}
-      {screen === 'result' ? <Result formData={invoiceData} onChange={(key, value) => setInvoiceData((prev) => ({ ...prev, [key]: value }))} onSave={handleSave} onConfirm={handleConfirm} saving={saving} confirming={confirming} /> : null}
+      {screen === 'result' ? <Result formData={invoiceData} onChange={(key, value) => setInvoiceData((prev) => ({ ...prev, [key]: value }))} onCancel={handleCancelResult} onConfirm={handleConfirm} confirming={confirming} /> : null}
       <VersionBadge />
     </>
   );

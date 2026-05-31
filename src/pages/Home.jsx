@@ -1,13 +1,25 @@
-import { useState } from 'react';
+function formatDateTime(value) {
+  if (!value) return 'Unknown date';
 
-function Home({ apiKey, onSaveApiKey, onScan, latestInvoices, onOpenInvoice }) {
-  const [draftKey, setDraftKey] = useState(apiKey || '');
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
 
-  function handleAuthSubmit(event) {
-    event.preventDefault();
-    onSaveApiKey(draftKey);
-  }
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  }).format(date);
+}
 
+function formatTotal(invoice) {
+  const amount = invoice.total_amount ?? invoice.total ?? invoice.total_sum;
+  const currency = invoice.currency || '';
+
+  if (amount === undefined || amount === null || amount === '') return 'Total unavailable';
+
+  return `${currency ? `${currency} ` : ''}${amount}`;
+}
+
+function Home({ onScan, onTokenUpdate, onDownloadDatabase, latestInvoices, onOpenInvoice, downloadingDatabase }) {
   return (
     <main className="container">
       <section className="card">
@@ -17,28 +29,21 @@ function Home({ apiKey, onSaveApiKey, onScan, latestInvoices, onOpenInvoice }) {
       </section>
 
       <section className="card">
-        <h3>API authentication</h3>
-        <p className="muted">Enter the backend API key. It is saved in this browser and sent as an Authorization: Bearer token on every backend request.</p>
-        <form onSubmit={handleAuthSubmit}>
-          <label className="field">
-            <span>Auth key</span>
-            <input
-              type="password"
-              value={draftKey}
-              onChange={(e) => setDraftKey(e.target.value)}
-              placeholder="Backend API key"
-              autoComplete="off"
-            />
-          </label>
-          <button type="submit">Save auth key</button>
-        </form>
+        <h3>Settings</h3>
+        <button type="button" className="secondary" onClick={onTokenUpdate}>Update Token</button>
+        <button type="button" className="secondary" onClick={onDownloadDatabase} disabled={downloadingDatabase}>
+          {downloadingDatabase ? 'Preparing download...' : 'Download Database'}
+        </button>
       </section>
 
       <section className="card">
         <h3>Recent invoices</h3>
         {latestInvoices?.length ? latestInvoices.map((inv) => (
-          <button key={inv.id} className="secondary" onClick={() => onOpenInvoice(inv.id)}>
-            {inv.id} • {inv.merchant || 'Unknown'} • {inv.status}
+          <button key={inv.id} className="invoice-list-item" onClick={() => onOpenInvoice(inv.id)}>
+            <span className="invoice-list-item__date">{formatDateTime(inv.date || inv.created_at || inv.uploaded_at)}</span>
+            <span className="invoice-list-item__merchant">{inv.merchant || 'Unknown merchant'}</span>
+            <span className="invoice-list-item__total">{formatTotal(inv)}</span>
+            <span className="invoice-list-item__summary">{inv.llm_summary || 'No LLM summary available.'}</span>
           </button>
         )) : <p className="muted">No recent invoices.</p>}
       </section>

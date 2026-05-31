@@ -97,17 +97,27 @@ function buildNetworkErrorMessage(error) {
   return 'Could not reach the backend from the browser. If the backend log shows OPTIONS 405, enable CORS preflight handling for the frontend origin and allow the Authorization header.';
 }
 
-async function request(path, options = {}) {
-  let res;
-
+async function fetchWithAuth(path, options = {}) {
   try {
-    res = await fetch(buildUrl(path), {
+    return await fetch(buildUrl(path), {
       ...options,
       headers: buildHeaders(options.headers)
     });
   } catch (error) {
     throw new Error(buildNetworkErrorMessage(error));
   }
+}
+
+function getFilenameFromContentDisposition(contentDisposition) {
+  const match = contentDisposition?.match(/filename\*=UTF-8''([^;]+)|filename=\"?([^\";]+)\"?/i);
+  const rawName = match?.[1] || match?.[2];
+  return rawName ? decodeURIComponent(rawName) : 'invoices.db';
+}
+
+async function request(path, options = {}) {
+  let res;
+
+  res = await fetchWithAuth(path, options);
 
   if (!res.ok) {
     const body = await res.text();
@@ -188,4 +198,28 @@ export function getLatestInvoices(n = 10) {
   const parsed = Number(n);
   const safeN = Number.isFinite(parsed) ? Math.min(100, Math.max(1, Math.trunc(parsed))) : 10;
   return request(`/invoices/latest?n=${safeN}`);
+}
+
+
+export async function downloadDatabase() {
+  const res = await fetchWithAuth('/database/download');
+
+  if (!res.ok) {
+    const body = await res.text();
+    const message = mapErrorMessage(res.status, body || `Request failed: ${res.status}`);
+    const error = new Error(message);
+    error.code = res.status;
+    throw error;
+  }
+
+  const blob = await res.blob();
+  const filename = getFilenameFromContentDisposition(res.headers.get('content-disposition'));
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(objectUrl);
 }
