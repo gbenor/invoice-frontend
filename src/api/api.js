@@ -108,10 +108,21 @@ async function fetchWithAuth(path, options = {}) {
   }
 }
 
-function getFilenameFromContentDisposition(contentDisposition) {
+function getFilenameFromContentDisposition(contentDisposition, fallback = 'invoices.db') {
   const match = contentDisposition?.match(/filename\*=UTF-8''([^;]+)|filename=\"?([^\";]+)\"?/i);
   const rawName = match?.[1] || match?.[2];
-  return rawName ? decodeURIComponent(rawName) : 'invoices.db';
+  return rawName ? decodeURIComponent(rawName) : fallback;
+}
+
+function downloadBlob(blob, filename) {
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(objectUrl);
 }
 
 async function request(path, options = {}) {
@@ -214,12 +225,32 @@ export async function downloadDatabase() {
 
   const blob = await res.blob();
   const filename = getFilenameFromContentDisposition(res.headers.get('content-disposition'));
-  const objectUrl = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = objectUrl;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(objectUrl);
+  downloadBlob(blob, filename);
+}
+
+export async function uploadDatabase(file) {
+  const res = await fetchWithAuth('/database/upload', {
+    method: 'POST',
+    body: buildFileFormData(file)
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    const message = mapErrorMessage(res.status, body || `Request failed: ${res.status}`);
+    const error = new Error(message);
+    error.code = res.status;
+    throw error;
+  }
+
+  const contentType = res.headers.get('content-type') || '';
+
+  if (contentType.includes('application/json')) {
+    return { downloadedPreviousDatabase: false, message: await res.json() };
+  }
+
+  const blob = await res.blob();
+  const filename = getFilenameFromContentDisposition(res.headers.get('content-disposition'), 'previous_database.db');
+  downloadBlob(blob, filename);
+
+  return { downloadedPreviousDatabase: true, filename };
 }

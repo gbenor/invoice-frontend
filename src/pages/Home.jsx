@@ -19,7 +19,17 @@ function formatTotal(invoice) {
   return `${currency ? `${currency} ` : ''}${amount}`;
 }
 
-function Home({ onScan, onTokenUpdate, onDownloadDatabase, latestInvoices, onOpenInvoice, downloadingDatabase }) {
+function Home({
+  onScan,
+  onTokenUpdate,
+  onDownloadDatabase,
+  onDatabaseFileSelect,
+  latestInvoices,
+  onOpenInvoice,
+  downloadingDatabase,
+  uploadingDatabase
+}) {
+  const databaseActionBusy = downloadingDatabase || uploadingDatabase;
   return (
     <main className="container">
       <section className="card">
@@ -31,9 +41,23 @@ function Home({ onScan, onTokenUpdate, onDownloadDatabase, latestInvoices, onOpe
       <section className="card">
         <h3>Settings</h3>
         <button type="button" className="secondary" onClick={onTokenUpdate}>Update Token</button>
-        <button type="button" className="secondary" onClick={onDownloadDatabase} disabled={downloadingDatabase}>
+        <button type="button" className="secondary" onClick={onDownloadDatabase} disabled={databaseActionBusy}>
           {downloadingDatabase ? 'Preparing download...' : 'Download Database'}
         </button>
+        <label className={`button-like secondary${databaseActionBusy ? ' disabled' : ''}`} aria-disabled={databaseActionBusy}>
+          <span>{uploadingDatabase ? 'Uploading database...' : 'DB Upload'}</span>
+          <input
+            type="file"
+            className="visually-hidden"
+            accept=".db,.sqlite,.sqlite3,application/vnd.sqlite3,application/x-sqlite3"
+            disabled={databaseActionBusy}
+            onChange={(event) => {
+              const selectedFile = event.target.files?.[0];
+              event.target.value = '';
+              if (selectedFile) onDatabaseFileSelect(selectedFile);
+            }}
+          />
+        </label>
       </section>
 
       <section className="card">
