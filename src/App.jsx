@@ -6,6 +6,7 @@ import TokenUpdate from './pages/TokenUpdate';
 import Upload from './pages/Upload';
 import Result from './pages/Result';
 import { clearApiKey, confirmInvoice, downloadDatabase, getApiKey, getInvoice, getLatestInvoices, setApiKey, updateInvoice, uploadInvoice } from './api/api';
+import { getDateInputValueOrToday } from './utils/dateInput';
 
 const EDITABLE_FIELDS = ['date', 'merchant', 'total_amount', 'currency', 'expense_type', 'note_from_user', 'llm_summary', 'short_title'];
 
@@ -75,7 +76,10 @@ function App() {
   }
 
   function buildInvoicePayload() {
-    return Object.fromEntries(EDITABLE_FIELDS.map((key) => [key, invoiceData[key]]));
+    return Object.fromEntries(EDITABLE_FIELDS.map((key) => [
+      key,
+      key === 'date' ? getDateInputValueOrToday(invoiceData[key]) : invoiceData[key]
+    ]));
   }
 
   async function handleConfirm() {

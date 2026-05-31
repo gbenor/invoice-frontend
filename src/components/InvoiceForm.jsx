@@ -1,13 +1,20 @@
 import { EXPENSE_TYPES } from '../api/api';
+import { getDateInputValueOrToday } from '../utils/dateInput';
 
 const CURRENCIES = ['GBP', 'EUR', 'ILS', 'USD'];
 
 function InvoiceForm({ formData, onChange, onCancel, onConfirm, confirming }) {
-  const textFields = ['date', 'merchant', 'total_amount', 'note_from_user', 'llm_summary', 'short_title'];
+  const textFields = ['merchant', 'total_amount', 'note_from_user', 'llm_summary', 'short_title'];
+  const invoiceDate = getDateInputValueOrToday(formData.date);
 
   return (
     <section className="card">
       <h2>Invoice Details</h2>
+
+      <label className="field">
+        <span>date</span>
+        <input type="date" value={invoiceDate} onChange={(event) => onChange('date', event.target.value)} />
+      </label>
 
       {textFields.map((key) => (
         <label key={key} className="field">
