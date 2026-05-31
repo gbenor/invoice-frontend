@@ -183,6 +183,34 @@ with open("/path/to/invoice.jpg", "rb") as file_obj:
 
 The router paths used by the frontend match the FastAPI router: `/upload`, `/debug-upload`, `/upload/monzo-csv`, `/upload/amazon-csv`, `/invoice/send`, `/invoices/latest`, `/invoice/{id}`, and `/invoice/{id}/confirm`. Browser-hosted deployments using bearer auth must allow CORS `OPTIONS` preflights and the `Authorization` header.
 
+### Browser CORS preflight for bearer authentication
+
+A browser request that includes `Authorization: Bearer <key>` is not a “simple request”, so the browser sends an unauthenticated `OPTIONS` preflight before the real `GET`, `POST`, or `PUT`. If the backend returns `405 Method Not Allowed` to that `OPTIONS` request, the browser blocks the real request before the API key can be checked. Backend logs like these point to CORS/preflight handling rather than a bad token:
+
+```txt
+OPTIONS /invoices/latest?n=10 HTTP/1.1 405 Method Not Allowed
+OPTIONS /upload HTTP/1.1 405 Method Not Allowed
+```
+
+Fix this in FastAPI by installing `CORSMiddleware` before protected routers and allowing the frontend origin plus the `Authorization` header:
+
+```python
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "https://gbenor.github.io",
+    ],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
+)
+```
+
+Do not protect `OPTIONS` with the API-key dependency. Preflight requests normally do not include the bearer token; CORS middleware should answer them and then the actual request will carry `Authorization: Bearer <stored access key>`.
+
 ## If you see a 404 on GitHub Pages
 
 1. Confirm the deploy workflow completed successfully in **Actions**.

@@ -88,11 +88,26 @@ function mapErrorMessage(status, fallback) {
   return byStatus[status] || fallback;
 }
 
+function buildNetworkErrorMessage(error) {
+  const message = error?.message || '';
+  const failedToFetch = error instanceof TypeError || /failed to fetch|networkerror/i.test(message);
+
+  if (!failedToFetch) return message || 'Network request failed.';
+
+  return 'Could not reach the backend from the browser. If the backend log shows OPTIONS 405, enable CORS preflight handling for the frontend origin and allow the Authorization header.';
+}
+
 async function request(path, options = {}) {
-  const res = await fetch(buildUrl(path), {
-    ...options,
-    headers: buildHeaders(options.headers)
-  });
+  let res;
+
+  try {
+    res = await fetch(buildUrl(path), {
+      ...options,
+      headers: buildHeaders(options.headers)
+    });
+  } catch (error) {
+    throw new Error(buildNetworkErrorMessage(error));
+  }
 
   if (!res.ok) {
     const body = await res.text();

@@ -27,6 +27,7 @@ function App() {
     if (screen !== 'home' && screen !== 'upload') return;
     getLatestInvoices(10).then(setLatestInvoices).catch((error) => {
       if (error.code === 401 || error.code === 403) handleUnauthorized();
+      else setGlobalError(error.message || 'Failed to load recent invoices');
     });
   }, [screen]);
 
