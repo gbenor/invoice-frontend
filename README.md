@@ -23,7 +23,7 @@ Set env values in `.env`:
 - `VITE_API_URL`: backend base URL (defaults to `https://invoice-production-a0d7.up.railway.app`)
 - `VITE_API_KEY`: optional default key (app uses user-entered key from localStorage)
 - `VITE_API_BASE_PATH`: optional backend route prefix, for example `/api` if the backend mounts routes under `/api`
-- `VITE_API_AUTH_MODE`: optional auth transport; defaults to `query` so browser requests include `?api_key=<key>` and avoid CORS `OPTIONS` preflights for cross-origin GET requests and multipart uploads. Set to `bearer`, `x-api-key`, `header`, or `none` only if the backend and CORS policy support that mode.
+- `VITE_API_AUTH_MODE`: optional auth transport; defaults to `bearer`, which sends `Authorization: Bearer <key>` to match the FastAPI backend. Other supported values are `x-api-key`, `query`, `header`, and `none`; use `query` only for local development against a backend that explicitly supports query fallback.
 - `VITE_API_AUTH_QUERY_PARAM`: optional query auth parameter name; defaults to `api_key`
 - `VITE_API_AUTH_HEADER_NAME`: optional custom header name when using `header`/`x-api-key`; defaults to `x-api-key`
 - `VITE_APP_VERSION`: optional visible app version override; defaults to `package.json` version
@@ -96,24 +96,92 @@ This publishes `dist` to the `gh-pages` branch via the `gh-pages` package.
 - `PUT /invoice/{id}`
 - `POST /invoice/{id}/confirm`
 
-By default, authenticated requests include the saved key in the query string:
+By default, authenticated requests send the saved key in the `Authorization` header:
 
 ```http
-GET /invoices/latest?n=10&api_key=<stored access key>
-POST /upload?api_key=<stored access key>
+GET /invoices/latest?n=10
+Authorization: Bearer <stored access key>
+
+POST /upload
+Authorization: Bearer <stored access key>
 ```
 
-This avoids the browser `OPTIONS` preflight that is triggered by `Authorization` and other custom auth headers on cross-origin requests. If a deployed environment still has `VITE_API_AUTH_MODE=bearer`, `header`, or `x-api-key` set, remove that override or set it to `query` so `/invoices/latest` and `/upload` can reach the backend without an `OPTIONS` request.
+The FastAPI backend ignores `?api_key=...` in production because authentication is implemented through the `Authorization` header dependency. Requests such as `/invoices/latest?n=10&api_key=joyajoya` or `/upload?api_key=joyajoya` therefore do not authenticate unless the backend is running an explicit development-only query fallback.
 
-If the backend only accepts bearer auth, it must enable CORS for `OPTIONS` and the `Authorization` header before a browser-hosted frontend can use this example:
+Production backend auth should parse comma-separated keys from `API_KEYS` and validate only bearer tokens:
+
+```python
+import os
+from fastapi import Depends, HTTPException, Query, Request, status
+
+AUTH_ERROR = "Missing or invalid API key. Use Authorization: Bearer <key>"
+DEV_MODE = os.getenv("ENV", "production").lower() in {"dev", "development", "local"}
+
+
+def configured_api_keys() -> set[str]:
+    return {key.strip() for key in os.getenv("API_KEYS", "").split(",") if key.strip()}
+
+
+def extract_bearer_token(authorization: str | None) -> str | None:
+    if not authorization:
+        return None
+    scheme, _, token = authorization.strip().partition(" ")
+    if scheme.lower() != "bearer" or not token.strip():
+        return None
+    return token.strip()
+
+
+async def require_api_key(request: Request, api_key: str | None = Query(default=None)) -> str:
+    token = extract_bearer_token(request.headers.get("Authorization"))
+    if token is None and DEV_MODE:
+        token = api_key
+
+    if not token or token not in configured_api_keys():
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=AUTH_ERROR)
+    return token
+
+
+# Apply consistently to protected routes/routers:
+# @app.post("/upload", dependencies=[Depends(require_api_key)])
+# @app.get("/invoices/latest", dependencies=[Depends(require_api_key)])
+# @app.get("/invoice/{invoice_id}", dependencies=[Depends(require_api_key)])
+# @app.put("/invoice/{invoice_id}", dependencies=[Depends(require_api_key)])
+# @app.post("/invoice/{invoice_id}/confirm", dependencies=[Depends(require_api_key)])
+```
+
+Example requests:
 
 ```bash
-curl -X POST http://localhost:8000/upload \
-  -H "Authorization: Bearer key1" \
+curl -X GET "https://invoice-production-a0d7.up.railway.app/invoices/latest?n=10" \
+  -H "Authorization: Bearer joyajoya"
+```
+
+```bash
+curl -X POST "https://invoice-production-a0d7.up.railway.app/upload" \
+  -H "Authorization: Bearer joyajoya" \
   -F "file=@/path/to/invoice.jpg;type=image/jpeg"
 ```
 
-The router paths used by the frontend match the FastAPI router: `/upload`, `/debug-upload`, `/upload/monzo-csv`, `/upload/amazon-csv`, `/invoice/send`, `/invoices/latest`, `/invoice/{id}`, and `/invoice/{id}/confirm`. Cross-origin `PUT /invoice/{id}` requests still require backend CORS `OPTIONS` support because `PUT` is not a browser simple request.
+```python
+import requests
+
+base_url = "https://invoice-production-a0d7.up.railway.app"
+headers = {"Authorization": "Bearer joyajoya"}
+
+latest = requests.get(f"{base_url}/invoices/latest", params={"n": 10}, headers=headers, timeout=30)
+latest.raise_for_status()
+
+with open("/path/to/invoice.jpg", "rb") as file_obj:
+    upload = requests.post(
+        f"{base_url}/upload",
+        headers=headers,
+        files={"file": ("invoice.jpg", file_obj, "image/jpeg")},
+        timeout=120,
+    )
+    upload.raise_for_status()
+```
+
+The router paths used by the frontend match the FastAPI router: `/upload`, `/debug-upload`, `/upload/monzo-csv`, `/upload/amazon-csv`, `/invoice/send`, `/invoices/latest`, `/invoice/{id}`, and `/invoice/{id}/confirm`. Browser-hosted deployments using bearer auth must allow CORS `OPTIONS` preflights and the `Authorization` header.
 
 ## If you see a 404 on GitHub Pages
 
